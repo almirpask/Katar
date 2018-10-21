@@ -5,23 +5,40 @@
       <router-link to="/about">About</router-link>
     </div>
     <router-view/> -->
-    <ul>
-      <li v-for="contributor in contributors" :key="contributor.id">
-        <span v-for="week in contributor.weeks" :key="week.id">
-          {{week.a}} | {{week.d}}
-        </span>
-      </li>
-    </ul>
-    <ul>
-      <li v-for="repository in repositories" :key="repository.id">
-        {{repository.name}}
-      </li>
-    </ul>
+    <div class="container">
+      <div class="row" v-for="(repository, index) in repositories" :key="repository.id">
+        <div class="col m4 s6">
+          {{repository.name}}
+          <table class="striped">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Contributions</th>
+                <th>Aditions</th>
+                <th>Deletions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(contributor, contributor_index) in contributors[index]" :key="contributor_index">
+                <td>
+                  <p>{{contributor.author.login}}</p>
+                  <img :src="contributor.author.avatar_url" alt="user_image" class="contributor-image">
+                </td>
+                <td>{{contributor.total}}</td>
+                <td>{{contributor.weeks.reduce((prev, curr) => {return prev + curr.a}, 0)}}</td>
+                <td>{{contributor.weeks.reduce((prev, curr) => {return prev + curr.d}, 0)}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import Axios from 'axios';
+Axios.defaults.headers.common['Authorization'] = `Bearer ${process.env.VUE_APP_API_SECRET}`
 export default {
   data(){
     return {
@@ -30,36 +47,21 @@ export default {
     }
   },
   mounted(){
-    Axios.get('https://api.github.com/users/name/repos').then((resp)=>{
+    Axios.get(`https://api.github.com/users/${process.env.VUE_APP_DEFAULT_USER}/repos`).then((resp)=>{
       this.repositories = resp.data
-      Axios.get(`https://api.github.com/repos/${resp.data[0].owner.login}/${resp.data[0].name}/stats/contributors`).then((contributors => {
-        console.log(contributors)
-        this.contributors = contributors.data
-      }))
-      
-      
+      resp.data.forEach(repository => {
+        Axios.get(`https://api.github.com/repos/${repository.owner.login}/${repository.name}/stats/contributors`).then((contributors => {
+          this.contributors = [ ...this.contributors, contributors.data]
+        }))
+      });  
     })
   }
 }
 </script>
 
 <style lang="scss">
-#app {
-  font-family: 'Avenir', Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-}
-#nav {
-  padding: 30px;
-  a {
-    font-weight: bold;
-    color: #2c3e50;
-    &.router-link-exact-active {
-      color: #42b983;
-    }
+  .contributor-image{
+    height: 7rem;
   }
-}
 </style>
 
